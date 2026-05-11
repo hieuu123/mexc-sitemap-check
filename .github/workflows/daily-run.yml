@@ -1,0 +1,44 @@
+name: Daily MEXC News Sitemap Checker
+
+on:
+  schedule:
+    # 15:00 GMT+7 = 08:00 UTC
+    - cron: "0 8 * * *"
+
+  workflow_dispatch:
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      SPREADSHEET_NAME: ${{ vars.SPREADSHEET_NAME }}
+      WORKSHEET_NAME: ${{ vars.WORKSHEET_NAME }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Restore Google credentials
+        run: |
+          echo "${{ secrets.GOOGLE_CREDENTIALS_BASE64 }}" | base64 -d > credentials.json
+
+      - name: Run MEXC sitemap checker
+        run: |
+          python main.py
+
+      - name: Remove credentials file
+        if: always()
+        run: |
+          rm -f credentials.json

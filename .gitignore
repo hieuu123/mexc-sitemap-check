@@ -1,0 +1,16 @@
+# Secrets
+credentials.json
+.env
+*.secret
+*.key
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Output files
+*.csv
+mexc_news_output.csv
+fetch.py
