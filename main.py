@@ -39,7 +39,30 @@ TZ_GMT7 = timezone(timedelta(hours=7))
 DAYS_BACK = 2
 
 INPUT_SITEMAPS = [
+    "https://www.mexc.co/ja-JP/news/all-sitemap.xml",
     "https://www.mexc.co/uk-UA/news/all-sitemap.xml",
+    "https://www.mexc.co/ru-RU/news/all-sitemap.xml",
+    "https://www.mexc.co/pt-PT/news/all-sitemap.xml",
+    "https://www.mexc.co/zh-TW/news/all-sitemap.xml",
+    "https://www.mexc.co/ar-AE/news/all-sitemap.xml",
+    "https://www.mexc.co/zh-MY/news/all-sitemap.xml",
+    "https://www.mexc.fm/id-ID/news/all-sitemap.xml",
+    "https://www.mexc.co/de-DE/news/all-sitemap.xml",
+    "https://www.mexc.co/es/news/all-sitemap.xml",
+    "https://www.mexc.co/vi-VN/news/all-sitemap.xml",
+    "https://www.mexc.co/fr/news/all-sitemap.xml",
+    "https://www.mexc.co/news/all-sitemap.xml",
+    "https://www.mexc.co/th-TH/news/all-sitemap.xml",
+    "https://www.mexc.co/pl-PL/news/all-sitemap.xml",
+    "https://www.mexc.co/nl-NL/news/all-sitemap.xml",
+    "https://www.mexc.co/bn-BD/news/all-sitemap.xml",
+    "https://www.mexc.co/ro-RO/news/all-sitemap.xml",
+    "https://www.mexc.co/fa-IR/news/all-sitemap.xml",
+    "https://www.mexc.co/hi-IN/news/all-sitemap.xml",
+    "https://www.mexc.co/el-GR/news/all-sitemap.xml",
+    "https://www.mexc.co/et-EE/news/all-sitemap.xml",
+    "https://www.mexc.fm/ms-MY/news/all-sitemap.xml",
+    "https://www.mexc.co/pt-BR/news/all-sitemap.xml"
 ]
 
 HEADERS = {
