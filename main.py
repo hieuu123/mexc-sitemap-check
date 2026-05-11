@@ -36,7 +36,7 @@ TZ_GMT7 = timezone(timedelta(hours=7))
 
 # Nếu muốn lấy hôm qua: 1
 # Nếu muốn lấy hôm kia: 2
-DAYS_BACK = 1
+DAYS_BACK = 2
 
 INPUT_SITEMAPS = [
     "https://www.mexc.co/uk-UA/news/all-sitemap.xml",
