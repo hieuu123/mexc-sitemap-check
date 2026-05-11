@@ -3,7 +3,7 @@ name: Daily MEXC News Sitemap Checker
 on:
   schedule:
     # 15:00 GMT+7 = 08:00 UTC
-    - cron: "0 8 * * *"
+    - cron: "0 2 * * *"
 
   workflow_dispatch:
 
