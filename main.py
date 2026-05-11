@@ -31,6 +31,9 @@ MAX_WORKERS_SITEMAP = 5
 # Không nên để quá cao vì dễ bị rate limit / timeout / tốn tiền nhanh.
 MAX_WORKERS_AI = 50
 
+# Mỗi batch xử lý 50 URL, xong batch nào append batch đó vào Google Sheet.
+BATCH_SIZE = 50
+
 # Lọc ngày theo GMT+7.
 TZ_GMT7 = timezone(timedelta(hours=7))
 
@@ -627,23 +630,22 @@ def get_existing_urls(sheet) -> set:
     }
 
 
-def append_results_to_sheet(final_data: List[Dict[str, object]]) -> int:
-    """Append final processed data to Google Sheet, skipping duplicate URLs."""
+def append_results_to_sheet(
+    final_data: List[Dict[str, object]],
+    sheet=None,
+) -> int:
+    """Append final processed data to Google Sheet."""
     if not final_data:
         return 0
 
-    sheet = get_worksheet()
-    ensure_header(sheet)
-
-    # existing_urls = get_existing_urls(sheet)
+    if sheet is None:
+        sheet = get_worksheet()
+        ensure_header(sheet)
 
     rows_to_append = []
 
     for r in final_data:
         url = (r.get("URL") or "").strip()
-
-        # if not url or url in existing_urls:
-        #     continue
 
         if not url:
             continue
@@ -665,8 +667,6 @@ def append_results_to_sheet(final_data: List[Dict[str, object]]) -> int:
             r.get("Run Date", ""),
         ])
 
-        # existing_urls.add(url)
-
     if rows_to_append:
         sheet.append_rows(
             rows_to_append,
@@ -675,6 +675,10 @@ def append_results_to_sheet(final_data: List[Dict[str, object]]) -> int:
 
     return len(rows_to_append)
 
+def chunks(items: List[Dict[str, str]], size: int):
+    """Yield list chunks with a fixed size."""
+    for i in range(0, len(items), size):
+        yield items[i:i + size]
 
 # ==========================================
 # MAIN
@@ -684,12 +688,13 @@ def main():
     start_time = time.time()
 
     target_date = (datetime.now(TZ_GMT7) - timedelta(days=DAYS_BACK)).strftime("%Y-%m-%d")
-    run_date = datetime.now(TZ_GMT7).strftime("%Y-%m-%d")
+    run_date = datetime.now(TZ_GMT7).strftime("%Y-%m-%d %H:%M:%S")
 
     print("=" * 80)
     print("MEXC News Sitemap Checker")
     print(f"Target date: {target_date}")
     print(f"Run date: {run_date}")
+    print(f"Batch size: {BATCH_SIZE}")
     print("=" * 80)
 
     raw_list = get_news_from_sitemaps(
@@ -704,28 +709,57 @@ def main():
 
     print(f"Total unique URLs from sitemap: {len(raw_list)}")
 
-    final_processed_data = process_articles_parallel(
-        raw_list=raw_list,
-        run_date=run_date,
-        max_workers=MAX_WORKERS_AI,
-    )
+    # Open Google Sheet once, then reuse it for every batch.
+    sheet = get_worksheet()
+    ensure_header(sheet)
 
-    if not final_processed_data:
-        print("No processed data.")
-        return
+    total_processed = 0
+    total_appended = 0
+    total_batches = (len(raw_list) + BATCH_SIZE - 1) // BATCH_SIZE
 
-    appended_count = append_results_to_sheet(final_processed_data)
+    for batch_index, batch in enumerate(chunks(raw_list, BATCH_SIZE), start=1):
+        batch_start_time = time.time()
+
+        print("=" * 80)
+        print(f"Processing batch {batch_index}/{total_batches}")
+        print(f"Batch URL count: {len(batch)}")
+        print("=" * 80)
+
+        batch_processed_data = process_articles_parallel(
+            raw_list=batch,
+            run_date=run_date,
+            max_workers=MAX_WORKERS_AI,
+        )
+
+        if not batch_processed_data:
+            print(f"Batch {batch_index}: no processed data.")
+            continue
+
+        appended_count = append_results_to_sheet(
+            final_data=batch_processed_data,
+            sheet=sheet,
+        )
+
+        total_processed += len(batch_processed_data)
+        total_appended += appended_count
+
+        batch_elapsed = time.time() - batch_start_time
+
+        print(
+            f"Batch {batch_index}/{total_batches} done. "
+            f"Processed: {len(batch_processed_data)}. "
+            f"Appended: {appended_count}. "
+            f"Batch elapsed: {batch_elapsed:.2f}s."
+        )
 
     elapsed = time.time() - start_time
 
     print("=" * 80)
-    print(f"Done. Processed: {len(final_processed_data)} articles.")
-    print(f"Appended to sheet: {appended_count} new rows.")
-    # print(f"Skipped duplicates: {len(final_processed_data) - appended_count}.")
-    print(f"Appended rows: {appended_count}.")
+    print("Done.")
+    print(f"Total processed: {total_processed} articles.")
+    print(f"Total appended to sheet: {total_appended} rows.")
     print(f"Elapsed: {elapsed:.2f} seconds.")
     print("=" * 80)
-
 
 if __name__ == "__main__":
     main()
