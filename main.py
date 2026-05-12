@@ -29,10 +29,10 @@ MODEL = "gpt-5-nano"
 MAX_WORKERS_SITEMAP = 5
 
 # Không nên để quá cao vì dễ bị rate limit / timeout / tốn tiền nhanh.
-MAX_WORKERS_AI = 50
+MAX_WORKERS_AI = 30
 
 # Mỗi batch xử lý 50 URL, xong batch nào append batch đó vào Google Sheet.
-BATCH_SIZE = 50
+BATCH_SIZE = 30
 
 # Lọc ngày theo GMT+7.
 TZ_GMT7 = timezone(timedelta(hours=7))
