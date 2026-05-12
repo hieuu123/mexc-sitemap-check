@@ -282,7 +282,7 @@ def call_openai_gatekeeper(title: str, content: str) -> Dict[str, object]:
             "Sentiment": "neutral",
             "Topic": "crypto headlines",
             "Reason": "Missing OpenAI API key",
-            "Decision": "Remove",
+            "Decision": "Error",
         }
 
     prompt = build_gatekeeper_prompt(title, content)
@@ -342,7 +342,7 @@ def call_openai_gatekeeper(title: str, content: str) -> Dict[str, object]:
             "Sentiment": "neutral",
             "Topic": "crypto headlines",
             "Reason": f"OpenAI call failed: {e}",
-            "Decision": "Remove",
+            "Decision": "Error",
         }
 
 
@@ -474,7 +474,7 @@ def make_error_result(
         "Sentiment": "neutral",
         "Topic": "crypto headlines",
         "Reason": reason,
-        "Decision": "Remove",
+        "Decision": "Error",
         "Language": url_data.get("Language", ""),
         "Date": url_data.get("Date", ""),
         "Title": url_data.get("Title", ""),
@@ -508,7 +508,7 @@ def process_url_full_logic(url_data: Dict[str, str], run_date: str) -> Optional[
                 "Sentiment": "neutral",
                 "Topic": "crypto headlines",
                 "Reason": "Content too short or cannot extract article body",
-                "Decision": "Remove",
+                "Decision": "Error",
             }
         else:
             ai_res = call_openai_gatekeeper(final_title, content_text)
