@@ -14,8 +14,6 @@ import os
 # ==========================================
 # CONFIG
 # ==========================================
-# Tạm thời hard-code theo yêu cầu.
-# Khuyến nghị: sau khi chạy ổn, chuyển sang biến môi trường.
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     raise ValueError("Missing OPENAI_API_KEY")
@@ -33,6 +31,9 @@ MAX_WORKERS_AI = 30
 
 # Mỗi batch xử lý 50 URL, xong batch nào append batch đó vào Google Sheet.
 BATCH_SIZE = 30
+
+OPENAI_RETRY_TIMES = 2
+OPENAI_RETRY_DELAY_SECONDS = 10
 
 # Lọc ngày theo GMT+7.
 TZ_GMT7 = timezone(timedelta(hours=7))
@@ -275,7 +276,7 @@ def call_openai_gatekeeper(title: str, content: str) -> Dict[str, object]:
     """Call OpenAI and return normalized classification result."""
     if not OPENAI_API_KEY or OPENAI_API_KEY == "PASTE_YOUR_OPENAI_API_KEY_HERE":
         return {
-            "Summary": "error; crypto headlines; Missing OpenAI API key; Remove",
+            "Summary": "error; crypto headlines; Missing OpenAI API key; Error",
             "Input Tokens": 0,
             "Output Tokens": 0,
             "Total Tokens": 0,
@@ -287,64 +288,78 @@ def call_openai_gatekeeper(title: str, content: str) -> Dict[str, object]:
 
     prompt = build_gatekeeper_prompt(title, content)
 
-    try:
-        headers = {
-            "Authorization": f"Bearer {OPENAI_API_KEY}",
-            "Content-Type": "application/json",
-        }
+    headers = {
+        "Authorization": f"Bearer {OPENAI_API_KEY}",
+        "Content-Type": "application/json",
+    }
 
-        payload = {
-            "model": MODEL,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt,
-                }
-            ],
-        }
+    payload = {
+        "model": MODEL,
+        "messages": [
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        ],
+    }
 
-        resp = requests.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers=headers,
-            json=payload,
-            timeout=45,
-        )
-        resp.raise_for_status()
+    last_error = None
 
-        data = resp.json()
+    # Lần đầu + số lần retry
+    total_attempts = 1 + OPENAI_RETRY_TIMES
 
-        raw_content = (
-            data.get("choices", [{}])[0]
-            .get("message", {})
-            .get("content", "")
-        )
+    for attempt in range(1, total_attempts + 1):
+        try:
+            resp = requests.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=45,
+            )
+            resp.raise_for_status()
 
-        usage = data.get("usage", {}) or {}
-        input_tokens = int(usage.get("prompt_tokens", 0) or 0)
-        output_tokens = int(usage.get("completion_tokens", 0) or 0)
-        total_tokens = int(usage.get("total_tokens", input_tokens + output_tokens) or 0)
+            data = resp.json()
 
-        normalized = normalize_ai_output(raw_content)
+            raw_content = (
+                data.get("choices", [{}])[0]
+                .get("message", {})
+                .get("content", "")
+            )
 
-        return {
-            **normalized,
-            "Input Tokens": input_tokens,
-            "Output Tokens": output_tokens,
-            "Total Tokens": total_tokens,
-        }
+            usage = data.get("usage", {}) or {}
+            input_tokens = int(usage.get("prompt_tokens", 0) or 0)
+            output_tokens = int(usage.get("completion_tokens", 0) or 0)
+            total_tokens = int(usage.get("total_tokens", input_tokens + output_tokens) or 0)
 
-    except Exception as e:
-        return {
-            "Summary": "error; crypto headlines; OpenAI call failed; Remove",
-            "Input Tokens": 0,
-            "Output Tokens": 0,
-            "Total Tokens": 0,
-            "Sentiment": "neutral",
-            "Topic": "crypto headlines",
-            "Reason": f"OpenAI call failed: {e}",
-            "Decision": "Error",
-        }
+            normalized = normalize_ai_output(raw_content)
 
+            return {
+                **normalized,
+                "Input Tokens": input_tokens,
+                "Output Tokens": output_tokens,
+                "Total Tokens": total_tokens,
+            }
+
+        except Exception as e:
+            last_error = e
+
+            if attempt < total_attempts:
+                print(
+                    f"[OPENAI RETRY] Attempt {attempt}/{total_attempts} failed. "
+                    f"Waiting {OPENAI_RETRY_DELAY_SECONDS}s. Error: {e}"
+                )
+                time.sleep(OPENAI_RETRY_DELAY_SECONDS)
+
+    return {
+        "Summary": "error; crypto headlines; OpenAI call failed; Error",
+        "Input Tokens": 0,
+        "Output Tokens": 0,
+        "Total Tokens": 0,
+        "Sentiment": "neutral",
+        "Topic": "crypto headlines",
+        "Reason": f"OpenAI call failed after {total_attempts} attempts: {last_error}",
+        "Decision": "Error",
+    }
 
 # ==========================================
 # SITEMAP
