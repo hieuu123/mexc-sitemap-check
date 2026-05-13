@@ -18,7 +18,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     raise ValueError("Missing OPENAI_API_KEY")
 
-SPREADSHEET_NAME = "MEXC Sitemap Checker"
+SPREADSHEET_NAME = "MEXC News Proofreader"
 WORKSHEET_NAME = "List"
 
 MODEL = "gpt-5-nano"
